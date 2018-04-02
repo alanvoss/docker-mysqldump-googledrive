@@ -1,0 +1,14 @@
+.ruby_version
+
+Dockerfile
+.dockerignore
+
+setup.rb
+credentials/*
+!credentials/.keep
+client_secret.json
+credentials.yaml
+README.md
+
+backups/*
+!backups/.keep
