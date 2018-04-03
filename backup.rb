@@ -93,13 +93,13 @@ def upload_file(service, gzipped_backup_path)
     if GOOGLE_DRIVE_BACKUPS_FOLDER
       folder_id = service.list_files(q: "name = '#{GOOGLE_DRIVE_BACKUPS_FOLDER}'").files.first.id
       DRIVE::File.new(
-        name: "#{BACKUP_FILE_PREFIX}#{timestamp}",
+        name: "#{BACKUP_FILE_PREFIX}#{timestamp}.gz",
         description: 'Today DB Upload',
         parents: [folder_id]
       )
     else
       DRIVE::File.new(
-        name: "#{BACKUP_FILE_PREFIX}#{timestamp}",
+        name: "#{BACKUP_FILE_PREFIX}#{timestamp}.gz",
         description: 'Today DB Upload'
       )
     end
@@ -107,7 +107,7 @@ def upload_file(service, gzipped_backup_path)
   service.create_file(
     file,
     upload_source: gzipped_backup_path,
-    content_type: 'text/plain'
+    content_type: 'application/gzip'
   )
 end
 
