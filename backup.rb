@@ -42,42 +42,52 @@ def authorize
 end
 
 # Initialize the API
-service = DRIVE::DriveService.new
-service.client_options.application_name = APPLICATION_NAME
-service.authorization = authorize
-
-backup_path = "#{BACKUPS_FOLDER}/dump.sql"
-gzipped_backup_path = "#{backup_path}.gz"
-timestamp = DateTime.now.strftime("%Y%m%dT%H%M%S")
-
-dump_command = "mysqldump --databases #{MYSQL_DATABASE} -h#{MYSQL_HOST} -u#{MYSQL_USER} "
-if MYSQL_PASSWORD
-  dump_command += "-p#{MYSQL_PASSWORD} "
+def get_service
+  service = DRIVE::DriveService.new
+  service.client_options.application_name = APPLICATION_NAME
+  service.authorization = authorize
+  service
 end
-dump_command += ">#{backup_path}"
 
-%x(#{dump_command})
-open("temp.txt", "w") do |output| 
-  open(backup_path).each_line do |line|
-    unless line =~ /Dump completed on/
-      output.write(line)
+def dump_db(backup_path)
+  dump_command = "mysqldump --databases #{MYSQL_DATABASE} -h#{MYSQL_HOST} -u#{MYSQL_USER} "
+  if MYSQL_PASSWORD
+    dump_command += "-p#{MYSQL_PASSWORD} "
+  end
+  dump_command += ">#{backup_path}"
+  %x(#{dump_command})
+end
+
+def filter_dump_completion_date(backup_path)
+  open("temp.txt", "w") do |output|
+    open(backup_path).each_line do |line|
+      unless line =~ /Dump completed on/
+        output.write(line)
+      end
     end
+  end
+
+  FileUtils.mv("temp.txt", backup_path)
+end
+
+def gzip_dump(backup_path)
+  %x(gzip -f -n --best #{backup_path})
+  "#{backup_path}.gz"
+end
+
+def previous_upload_md5(service)
+  previous_upload = service.list_files(
+    q: "name contains '#{BACKUP_FILE_PREFIX}' and trashed = false",
+    order_by: 'createdTime desc',
+    fields: 'files(md5Checksum)'
+  ).files.first
+  if previous_upload
+    previous_upload.md5_checksum
   end
 end
 
-FileUtils.mv("temp.txt", backup_path)
-%x(gzip -f -n --best #{backup_path})
-
-hex_digest = Digest::MD5.hexdigest(File.read(gzipped_backup_path))
-previous_upload = service.list_files(
-  q: "name contains '#{BACKUP_FILE_PREFIX}'",
-  order_by: 'createdTime desc',
-  fields: 'files(id, name, md5Checksum)'
-).files.first
-
-if previous_upload && hex_digest == previous_upload.md5_checksum
-  warn "backup identical - not uploading again"
-else
+def upload_file(service, gzipped_backup_path)
+  timestamp = DateTime.now.strftime("%Y%m%dT%H%M%S")
   file =
     if GOOGLE_DRIVE_BACKUPS_FOLDER
       folder_id = service.list_files(q: "name = '#{GOOGLE_DRIVE_BACKUPS_FOLDER}'").files.first.id
@@ -99,3 +109,21 @@ else
     content_type: 'text/plain'
   )
 end
+
+def backup
+  backup_path = "#{BACKUPS_FOLDER}/dump.sql"
+  dump_db(backup_path)
+  filter_dump_completion_date(backup_path)
+  gzipped_backup_path = gzip_dump(backup_path)
+
+  service = get_service
+  hex_digest = Digest::MD5.hexdigest(File.read(gzipped_backup_path))
+
+  if hex_digest == previous_upload_md5(service)
+    warn "backup identical - not uploading again"
+  else
+    upload_file(service, gzipped_backup_path)
+  end
+end
+
+backup
