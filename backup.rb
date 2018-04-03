@@ -15,6 +15,7 @@ MYSQL_USER = ENV['MYSQL_USER'] ||
   raise("no MYSQL_USER env var declared")
 MYSQL_PASSWORD = ENV['MYSQL_PASSWORD'] ||
   warn("no MYSQL_PASSWORD env var declared")
+BACKUP_FREQUENCY = ENV['BACKUP_FREQUENCY']
 
 OOB_URI = 'urn:ietf:wg:oauth:2.0:oob'
 APPLICATION_NAME = 'Drive API Ruby Quickstart'
@@ -126,4 +127,26 @@ def backup
   end
 end
 
-backup
+def sleep_seconds
+  seconds_in_period = {
+    second: 1,
+    minute: 60,
+    h: 60 * 60,
+    d: 24 * 60 * 60,
+    w: 24 * 60 * 60 * 7,
+    m: 24 * 60 * 60 * 30,
+    y: 24 * 60 * 60 * 365
+  }
+
+  matcher = /(\d+)\s*(second|minute|h|d|w|m|y)/.match(BACKUP_FREQUENCY)
+
+  seconds_in_period[matcher[2].to_sym] * matcher[1].to_i
+end
+
+loop do
+  backup
+  if !BACKUP_FREQUENCY
+    break
+  end
+  sleep sleep_seconds
+end

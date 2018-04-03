@@ -36,5 +36,6 @@ And then also some optional ones:
 - `MYSQL_HOST` -  the hostname of the mysql instance (in `docker-compose.yml`, use the name of the mysql service)
 - `BACKUP_FILE_PREFIX` - a prefix to come before a timestamp for all uploaded db files
 - `MYSQL_PASSWORD` - the db password for `MYSQL_USER`, if set
+- `BACKUP_FREQUENCY` - the frequency in which the db should be backed up (actually, sleep seconds between backups), format should be an integer followed by a time period name (such as `weeks`, `minutes`, `seconds`, `years`).  If absent, backs up once and exits.
 
 ### Sample docker-compose file
