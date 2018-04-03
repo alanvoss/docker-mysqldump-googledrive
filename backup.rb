@@ -60,7 +60,7 @@ def dump_db(backup_path)
 end
 
 def filter_dump_completion_date(backup_path)
-  open("temp.txt", "w") do |output|
+  open("#{BACKUPS_FOLDER}/temp.txt", "w") do |output|
     open(backup_path).each_line do |line|
       unless line =~ /Dump completed on/
         output.write(line)
@@ -68,7 +68,7 @@ def filter_dump_completion_date(backup_path)
     end
   end
 
-  FileUtils.mv("temp.txt", backup_path)
+  FileUtils.mv("#{BACKUPS_FOLDER}/temp.txt", backup_path)
 end
 
 def gzip_dump(backup_path)

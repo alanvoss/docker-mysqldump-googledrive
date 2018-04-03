@@ -39,3 +39,32 @@ And then also some optional ones:
 - `BACKUP_FREQUENCY` - the frequency in which the db should be backed up (actually, sleep seconds between backups), format should be an integer followed by a time period name (such as `weeks`, `minutes`, `seconds`, `years`).  If absent, backs up once and exits.
 
 ### Sample docker-compose file
+
+```
+version: '2'
+services:
+  mysql:
+    image: mysql:5.6
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=mydatabase
+      - MYSQL_USER=myuser
+      - MYSQL_PASSWORD=myuserpassword
+  mysql_backup:
+    image: alanvoss/mysqldump-googledrive:1.0
+    restart: always
+    volumes:
+      - ~/.credentials:/var/lib/credentials
+    environment:
+      GOOGLE_DRIVE_BACKUPS_FOLDER: database_backups
+      LOCAL_CREDENTIALS_FOLDER: /var/lib/credentials
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: myuserpassword
+      BACKUP_FILE_PREFIX: db_dump_
+      BACKUP_FREQUENCY: 1 day
+    links:
+      - mysql:mysql
+```
